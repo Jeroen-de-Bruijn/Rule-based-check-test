@@ -22,7 +22,8 @@ class FunctionInputs(AutomateBase):
     """
 
     # an example how to use secret values
-    whisper_message: SecretStr = Field(title="This is a secret message")
+    # whisper_message: SecretStr = Field(title="This is a secret message")
+
     forbidden_speckle_type: str = Field(
         title="Forbidden speckle type",
         description=(
@@ -56,6 +57,7 @@ def automate_function(
     count = len(objects_with_forbidden_speckle_type)
 
     if count > 0:
+        '''
         # this is how a run is marked with a failure cause
         automate_context.attach_error_to_objects(
             category="Forbidden speckle_type"
@@ -66,6 +68,22 @@ def automate_function(
         )
         automate_context.mark_run_failed(
             "Automation failed: "
+            f"Found {count} object that have one of the forbidden speckle types: "
+            f"{function_inputs.forbidden_speckle_type}"
+        )
+        '''
+
+        # automate_context.attach_error_to_objects(
+        automate_context.attach_result_to_objects(
+            category="Forbidden speckle_type"
+            " ({function_inputs.forbidden_speckle_type})",
+            object_ids=[o.id for o in objects_with_forbidden_speckle_type if o.id],
+            message="This project should not contain the type: "
+            f"{function_inputs.forbidden_speckle_type}",
+        )
+        # automate_context.mark_run_failed(
+        automate_context.mark_run_success(
+            "Automation completed: "
             f"Found {count} object that have one of the forbidden speckle types: "
             f"{function_inputs.forbidden_speckle_type}"
         )
