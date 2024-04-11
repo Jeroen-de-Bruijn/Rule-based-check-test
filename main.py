@@ -29,7 +29,7 @@ class FunctionInputs(AutomateBase):
         description="If a object has the following speckle_type, it will be marked with a warning.",
     )
     
-    # anonymize_emails: bool = Field(
+    # delete_objects: bool = Field(
     #    default=False,
     #    title="TEST Delete objects",
     #    description="Enable this option to delete the objects.",
