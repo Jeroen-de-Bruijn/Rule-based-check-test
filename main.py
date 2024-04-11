@@ -26,12 +26,14 @@ class FunctionInputs(AutomateBase):
 
     forbidden_speckle_type: str = Field(
         title="Forbidden speckle type",
-        description=(
-            "If a object has the following speckle_type,"
-            " it will be marked with an error."
-        ),
+        description="If a object has the following speckle_type, it will be marked with a warning.",
     )
-
+    
+    # anonymize_emails: bool = Field(
+    #    default=False,
+    #    title="TEST Delete objects",
+    #    description="Enable this option to delete the objects.",
+    #)
 
 def automate_function(
     automate_context: AutomationContext,
