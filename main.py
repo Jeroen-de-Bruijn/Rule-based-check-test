@@ -74,7 +74,9 @@ def automate_function(
         '''
 
         # automate_context.attach_error_to_objects(
-        automate_context.attach_result_to_objects(
+        automate_context.attach_warning_to_objects(
+        # automate_context.attach_info_to_objects(
+        # this requires a level: automate_context.attach_result_to_objects(
             category="Forbidden speckle_type"
             " ({function_inputs.forbidden_speckle_type})",
             object_ids=[o.id for o in objects_with_forbidden_speckle_type if o.id],
