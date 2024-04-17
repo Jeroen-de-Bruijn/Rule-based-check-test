@@ -88,9 +88,9 @@ def automate_function(
     # version_id = "07dcb5fae8"
     # versions overview = https://latest.speckle.systems/projects/e79a76b289/models/3b4ec1bbbb/versions
     
-    # Get other version
-    project_id = "e79a76b289"
-    version_id = "07dcb5fae8"
+    # Get other version from other project doesn't work. Try from same project
+    project_id = automate_context.automation_run_data.project_id
+    version_id = "488ab9d83b"
     the_speckle_client = automate_context.speckle_client
     other_commit = the_speckle_client.commit.get(project_id, version_id)
     
@@ -216,9 +216,9 @@ def automate_function(
         type1 = wall1["type"]
         type2 = wall2["type"]
 
-        print(f"Wall1 type: {type1}\n",
-              f"Wall2 type: {type2}\n",
-              f"Distance: {match_distance[i]}")
+        #print(f"Wall1 type: {type1}\n",
+        #      f"Wall2 type: {type2}\n",
+        #      f"Distance: {match_distance[i]}")
 
         if type1 == type2:
             count_types_ok += 1
