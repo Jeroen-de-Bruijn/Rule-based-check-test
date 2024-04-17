@@ -76,6 +76,11 @@ def automate_function(
     """
     print("test function 01")
     
+    # The context provides a convenient way, to receive the triggering version
+    version_root_object = automate_context.receive_version()
+
+    print("test function 02")
+    
     # project = https://latest.speckle.systems/projects/e79a76b289
     # model = https://latest.speckle.systems/projects/e79a76b289/models/3b4ec1bbbb/
     # version = https://latest.speckle.systems/projects/e79a76b289/models/3b4ec1bbbb%4007dcb5fae8
@@ -98,10 +103,6 @@ def automate_function(
     other_server_transport = ServerTransport(stream_id=project_id, client=the_speckle_client)
     other_root_object = operations.receive(other_commit.referencedObject, other_server_transport)
 
-    print("test function 02")
-    
-    # The context provides a convenient way, to receive the triggering version
-    version_root_object = automate_context.receive_version()
     print("test function 03")
 
     # Get all walls so we can check and compare their types
