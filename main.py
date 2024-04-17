@@ -3,7 +3,6 @@
 Use the automation_context module to wrap your function in an Automate context helper
 """
 
-import os
 import numpy as np
 
 from pydantic import Field, SecretStr
@@ -16,13 +15,7 @@ from speckle_automate import (
 from flatten import flatten_base
 
 # import
-#from specklepy.api.wrapper import StreamWrapper
 from specklepy.api import operations
-#from specklepy.serialization.base_object_serializer import BaseObjectSerializer
-
-from specklepy.api import operations
-from specklepy.api.client import SpeckleClient
-#from specklepy.objects.base import Base
 from specklepy.transports.server import ServerTransport
 
 class FunctionInputs(AutomateBase):
@@ -90,30 +83,19 @@ def automate_function(
     # version_id = "07dcb5fae8"
     # versions overview = https://latest.speckle.systems/projects/e79a76b289/models/3b4ec1bbbb/versions
     
-    speckle_server_url = "https://latest.speckle.systems/"
-    
+    # Get other version
     project_id = "e79a76b289"
     version_id = "07dcb5fae8"
-
-    env_var = "SPECKLE_TOKEN"
-    token = os.getenv(env_var)
-    if not token:
-        raise ValueError(f"Cannot run without a {env_var} environment variable")
+    the_speckle_client = automate_context.speckle_client
+    other_commit = the_speckle_client.commit.get(project_id, version_id)
     
-    other_client = SpeckleClient(speckle_server_url, speckle_server_url.startswith("https"))
-    # other_client.authenticate_with_token(automate_context._speckle_token)
-    other_client.authenticate_with_token(token)
-    
-    other_commit = other_client.commit.get(project_id, version_id)
-
     print("other_commit:")
     print(other_commit)
     
     if not other_commit.referencedObject:
         raise ValueError("The commit has no referencedObject, cannot receive it.")
     
-    #other_server_transport: ServerTransport
-    other_server_transport = ServerTransport(stream_id=project_id, client=other_client)
+    other_server_transport = ServerTransport(stream_id=project_id, client=the_speckle_client)
     other_root_object = operations.receive(other_commit.referencedObject, other_server_transport)
 
     print("test function 02")
