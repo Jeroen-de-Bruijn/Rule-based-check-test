@@ -3,7 +3,7 @@
 Use the automation_context module to wrap your function in an Automate context helper
 """
 
-# import os
+import os
 import numpy as np
 
 from pydantic import Field, SecretStr
@@ -95,8 +95,14 @@ def automate_function(
     project_id = "e79a76b289"
     version_id = "07dcb5fae8"
 
+    env_var = "SPECKLE_TOKEN"
+    token = os.getenv(env_var)
+    if not token:
+        raise ValueError(f"Cannot run without a {env_var} environment variable")
+    
     other_client = SpeckleClient(speckle_server_url, speckle_server_url.startswith("https"))
-    other_client.authenticate_with_token(automate_context._speckle_token)
+    # other_client.authenticate_with_token(automate_context._speckle_token)
+    other_client.authenticate_with_token(token)
     
     other_commit = other_client.commit.get(project_id, version_id)
 
