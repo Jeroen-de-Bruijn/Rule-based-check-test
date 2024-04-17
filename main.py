@@ -100,6 +100,9 @@ def automate_function(
     
     other_commit = other_client.commit.get(project_id, version_id)
 
+    print("other_commit:")
+    print(other_commit)
+    
     if not other_commit.referencedObject:
         raise ValueError("The commit has no referencedObject, cannot receive it.")
     
