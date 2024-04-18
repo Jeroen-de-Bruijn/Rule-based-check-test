@@ -29,9 +29,9 @@ class FunctionInputs(AutomateBase):
     # an example how to use secret values
     # whisper_message: SecretStr = Field(title="This is a secret message")
 
-    forbidden_speckle_type: str = Field(
-        title="Forbidden speckle type",
-        description="If a object has the following speckle_type, it will be marked with a warning.",
+    otherVersionId: str = Field(
+        title="Other version ID",
+        description="Specify the ID of the other version to compare with.",
     )
     
     # delete_objects: bool = Field(
@@ -61,6 +61,42 @@ def get_parameter_value(speckle_object):
         return None
 
 
+def get_average_point(speckle_objects):
+    filtered_objects = []
+    average_points = []
+
+    for count, speckle_object in enumerate(speckle_objects):
+        mesh_list = speckle_object["displayValue"]
+        
+        if not len(mesh_list) >= 1:
+            # No mesh found so go to the next item in the loop
+            continue
+        
+        # Add object with mesh to list
+        filtered_objects.append(speckle_object)
+
+        # New empty list
+        vertices_tuples = []
+        
+        # Loop through each mesh
+        for m in mesh_list:
+            vertices_list = m["vertices"]
+            # Convert the flat list into a list of tuples
+            temp_vertices_tuples = [(vertices_list[i], vertices_list[i + 1], vertices_list[i + 2]) for i in range(0, len(vertices_list), 3)]
+            # Extend (so it remains one list) the list with these points 
+            vertices_tuples.extend(temp_vertices_tuples)
+        
+        # Convert to NumPy array
+        vertices_array = np.array(vertices_tuples)
+        # Get average point
+        average_p = np.mean(vertices_array, axis=0)
+        # Add to list
+        average_points.append(average_p)
+    
+    # Return lists
+    return filtered_objects, average_points
+
+
 def automate_function(
     automate_context: AutomationContext,
     function_inputs: FunctionInputs,
@@ -81,16 +117,10 @@ def automate_function(
 
     print("test function 02")
     
-    # project = https://latest.speckle.systems/projects/e79a76b289
-    # model = https://latest.speckle.systems/projects/e79a76b289/models/3b4ec1bbbb/
-    # version = https://latest.speckle.systems/projects/e79a76b289/models/3b4ec1bbbb%4007dcb5fae8
-    # project_id = "e79a76b289"
-    # version_id = "07dcb5fae8"
-    # versions overview = https://latest.speckle.systems/projects/e79a76b289/models/3b4ec1bbbb/versions
-    
-    # Get other version from other project doesn't work. Try from same project
+    # Get other version from the same project (a different project doesn't seem to work, probably by design)
     project_id = automate_context.automation_run_data.project_id
-    version_id = "488ab9d83b"
+    # version_id = "488ab9d83b"
+    version_id = function_inputs.otherVersionId
     the_speckle_client = automate_context.speckle_client
     other_commit = the_speckle_client.commit.get(project_id, version_id)
     
@@ -122,50 +152,13 @@ def automate_function(
     ]
     other_count = len(other_objects_match)
     
-    list_points = []
-    other_list_points = []
-    remove_objects = []
-    other_remove_objects = []
+    # Check mesh and get average point
+    objects_match_clean, list_points = get_average_point(objects_match)
+    other_objects_match_clean, other_list_points = get_average_point(other_objects_match)
 
-    print("loop1")
-    for count, o in enumerate(objects_match):
-        mesh_list = o["displayValue"]
-
-        if len(mesh_list) >= 1:
-            mesh_first = mesh_list[0]
-        else:
-            remove_objects.append(count)
-            # No mesh found so go to the next item in the loop
-            continue
-        
-        vertices_list = mesh_first["vertices"]
-        p1 = vertices_list[0], vertices_list[1], vertices_list[2]
-
-        list_points.append(p1)
-    
-    print("loop other_objects_match")
-    for count, o in enumerate(other_objects_match):
-        mesh_list = o["displayValue"]
-        
-        if len(mesh_list) >= 1:
-            mesh_first = mesh_list[0]
-        else:
-            other_remove_objects.append(count)
-            # No mesh found so go to the next item in the loop
-            continue
-        
-        vertices_list = mesh_first["vertices"]
-        p1 = vertices_list[0], vertices_list[1], vertices_list[2]
-        
-        other_list_points.append(p1)
-    
     print("test function 04 point lists created")
 
-    # Remove walls without mesh
-    objects_match_clean = [item for i, item in enumerate(objects_match) if i not in remove_objects]
-    other_objects_match_clean = [item for i, item in enumerate(other_objects_match) if i not in other_remove_objects]
-    
-    # Convert lists to NumPy arrays for efficient computation
+    # Rename lists
     list_A = list_points
     list_B = other_list_points
     
@@ -176,10 +169,7 @@ def automate_function(
     # Initialize an array to keep track of whether points in list_B have been used
     used_indices = np.zeros(len(list_B), dtype=bool)
 
-    # Initialize an array to store the closest points
-    test_obj = {
-
-    }
+    # Initialize lists to store the closest points
     closest_points = []
     closest_walls = []
     match_distance = []
@@ -199,52 +189,63 @@ def automate_function(
         # Append the closest point to the result
         closest_points.append(list_B[closest_index])
         closest_walls.append(other_objects_match_clean[closest_index])
-        match_distance.append(distances[closest_index])
+        match_distance.append(round(distances[closest_index], 2))
 
     # matches = {"distance": X, "wall1": other_object, "wall2": different_object}
 
     print("test function 05 closest points calculated")
+    
+    successful = []
+    failed = []
 
-    count_types_ok = 0
-    count_types_fail = 0
-
-    # Print the results
-    # for i, point in enumerate(closest_points):
-    #    print(f"Closest point for point {list_A[i]} is {point}")
+    # Loop through all walls
     for i, wall2 in enumerate(closest_walls):
         wall1 = objects_match_clean[i]
         type1 = wall1["type"]
         type2 = wall2["type"]
-
-        #print(f"Wall1 type: {type1}\n",
-        #      f"Wall2 type: {type2}\n",
-        #      f"Distance: {match_distance[i]}")
-
+        combined_data = wall1.id, type1, type2, match_distance[i]
+        
         if type1 == type2:
-            count_types_ok += 1
-            automate_context.attach_info_to_objects(
-                category = "Type check ok",
-                object_ids = wall1.id,
-                message = f"Wall1 type: {type1}\nWall2 type: {type2}\nDistance: {match_distance[i]}"
-            )
+            successful.append(combined_data)
         else:
-            count_types_fail += 1
-            automate_context.attach_warning_to_objects(
-            #automate_context.attach_error_to_objects(
-                category = "Type check failed",
-                object_ids = wall1.id,
-                message = f"Wall1 type: {type1}\nWall2 type: {type2}\nDistance: {match_distance[i]}"
-            )
+            failed.append(combined_data)
+    
+    count_success = len(successful)
+    count_fail = len(failed)
+
+    if count_success >= 1:
+        wall_ids = [combined_data[0] for combined_data in successful]
+        types1 = [combined_data[1] for combined_data in successful]
+        types2 = [combined_data[2] for combined_data in successful]
+        matched_dist = [combined_data[3] for combined_data in successful]
+        
+        automate_context.attach_info_to_objects(
+            category = "Type check ok",
+            object_ids = wall_ids,
+            message = f"Wall1 types: {types1}\nWall2 types: {types2}\nDistance: {matched_dist}"
+        )
+    
+    if count_fail >= 1:
+        wall_ids = [combined_data[0] for combined_data in failed]
+        types1 = [combined_data[1] for combined_data in failed]
+        types2 = [combined_data[2] for combined_data in failed]
+        matched_dist = [combined_data[3] for combined_data in failed]
+        
+        automate_context.attach_warning_to_objects(
+            category = "Type check FAILED",
+            object_ids = wall_ids,
+            message = f"Wall1 types: {types1}\nWall2 types: {types2}\nDistance: {matched_dist}"
+        )
 
     print("test function code completed")
 
-    if count_types_fail == 0 and count_types_ok == 0:
-        automate_context.mark_run_failed("Automation run failed. Something went wrong. Maybe no walls were found?")
+    if count_fail == 0 and count_success == 0:
+        automate_context.mark_run_failed("Automation run failed. Something went wrong. It looks like no walls were found")
     else:
         automate_context.mark_run_success(
             "Automation completed: "
-            f"{count_types_fail} objects have non matching wall types! It's advised to review them.\n"
-            f"{count_types_ok} objects have matching wall types."
+            f"{count_fail} objects have non matching wall types! It's advised to review them.\n"
+            f"{count_success} objects have matching wall types."
         )
 
         # set the automation context view, to the original model / version view
